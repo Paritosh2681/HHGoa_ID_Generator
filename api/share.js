@@ -42,7 +42,11 @@ async function uploadImage(req, res) {
     const fd = new FormData();
     fd.append('reqtype', 'fileupload');
     fd.append('fileToUpload', new Blob([buf], { type: 'image/jpeg' }), 'card.jpg');
-    const r = await fetch('https://catbox.moe/user/api.php', { method: 'POST', body: fd });
+    // catbox rejects undici's default UA with "Invalid uploader"
+    const r = await fetch('https://catbox.moe/user/api.php', {
+      method: 'POST', body: fd,
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/125 Safari/537.36' },
+    });
     const txt = (await r.text()).trim();
     if (/^https:\/\/(files\.)?catbox\.moe\/.+\.(jpg|jpeg|png|webp)$/.test(txt)) {
       res.setHeader('Cache-Control', 'no-store');
