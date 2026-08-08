@@ -1,6 +1,6 @@
 {
   "rewrites": [
-    { "source": "/share/:payload", "destination": "/api/share" },
-    { "source": "/api/png/:payload", "destination": "/api/share" }
+    { "source": "/share/:payload", "destination": "/api/share?p=:payload" },
+    { "source": "/api/png/:payload", "destination": "/api/share?png=1&p=:payload" }
   ]
 }

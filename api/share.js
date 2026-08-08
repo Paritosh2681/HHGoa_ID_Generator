@@ -62,14 +62,13 @@ function CARD_HTML(p, ogImage) {
 }
 
 module.exports = async (req, res) => {
-  // req.url = /share/<payload> or /api/png/<payload>
-  const segs = req.url.split('/').filter(Boolean); // ['share', payload] | ['api','png',payload]
-  const payload = segs[segs.length - 1];
+  // Rewritten routes: /share/<payload> → /api/share?p=<payload>, /api/png/<payload> → ?png=1&p=<payload>
+  const payload = (req.query && req.query.p) || req.url.split('/').filter(Boolean).pop();
+  const isPng = !!((req.query && req.query.png) || (req.url.split('/')[1] === 'api' && req.url.split('/')[2] === 'png'));
   let p = null;
   try { p = decodePayload(payload); } catch (e) { p = null; }
   if (!p) { res.statusCode = 404; res.end('Not found'); return; }
 
-  const isPng = segs[0] === 'api' && segs[1] === 'png';
   if (isPng) {
     if (p.img && p.img.startsWith('http')) {
       // catbox URL — 302 to it; crawlers and browsers follow fine
