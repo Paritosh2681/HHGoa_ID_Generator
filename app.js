@@ -596,8 +596,12 @@ async function downloadPNG() {
 
 function captionFor() {
   const name = (els.nameInput.value || 'me').trim().toUpperCase();
+  const cls = (els.classInput.value || pickClass(name, '', state.classSeed)).toUpperCase();
+  // ponytail: link = current page; swap for a per-card share link if the
+  // backend ever issues /share/<id> passes.
+  const link = location.origin + location.pathname;
   if (state.format === 'id') {
-    return `My HH Goa 2026 Builder ID just dropped 🏝️ ${name}. Make yours in one pass #FrameInGoa`;
+    return `Just locked in my spot for Hacker House Goa 2026 🌴\n\n${name} BUILDER • ${cls}\n\nCheck out my pass: ${link}\n\n#FrameInGoa #HHGoa2026 #HackerHouseGoa`;
   }
   return `New PFP, who dis? 🏝️ HH Goa 2026. Frame yours #FrameInGoa`;
 }
@@ -633,14 +637,17 @@ function shareToX() {
 // an image. No URL in the post — the card itself is what gets shared.
 function openXWithImage(text) {
   const t = encodeURIComponent(text);
-  window.open(`https://x.com/intent/post?text=${t}`, '_blank', 'noopener');
   (async () => {
     try {
+      // clipboard BEFORE opening the X tab — window.open steals focus, and
+      // navigator.clipboard.write fails in an unfocused document.
       const blob = await canvasToBlob(els.canvas);
       if (typeof ClipboardItem === 'undefined') throw new Error('no ClipboardItem');
       await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      window.open(`https://x.com/intent/post?text=${t}`, '_blank', 'noopener');
       flashToast('ID card copied — paste it (Ctrl/⌘+V) into the X post');
     } catch (e) {
+      window.open(`https://x.com/intent/post?text=${t}`, '_blank', 'noopener');
       downloadPNG();
       flashToast('ID card downloaded — attach it to the X post');
     }
