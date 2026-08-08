@@ -20,8 +20,8 @@ function absUrl(req, path) {
   return `${proto}://${host}${path}`;
 }
 
-// POST body = raw JPEG bytes (or base64) → upload to catbox → {url}
-// ponytail: catbox anon upload, no key, images persist. Fallback lives client-side.
+// POST body = raw JPEG bytes (or base64) → upload to uguu.se → {url}
+// ponytail: anonymous host, no key, files long-lived. Fallback lives client-side.
 async function uploadImage(req, res) {
   try {
     const chunks = [];
@@ -40,21 +40,20 @@ async function uploadImage(req, res) {
       res.statusCode = 400; res.end('bad image'); return;
     }
     const fd = new FormData();
-    fd.append('reqtype', 'fileupload');
-    fd.append('fileToUpload', new Blob([buf], { type: 'image/jpeg' }), 'card.jpg');
-    // catbox rejects undici's default UA with "Invalid uploader"
-    const r = await fetch('https://catbox.moe/user/api.php', {
+    fd.append('files[]', new Blob([buf], { type: 'image/jpeg' }), 'card.jpg');
+    const r = await fetch('https://uguu.se/upload', {
       method: 'POST', body: fd,
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/125 Safari/537.36' },
+      headers: { 'User-Agent': 'curl/8.4.0' },
     });
-    const txt = (await r.text()).trim();
-    if (/^https:\/\/(files\.)?catbox\.moe\/.+\.(jpg|jpeg|png|webp)$/.test(txt)) {
+    const j = await r.json();
+    const url = j && j.files && j.files[0] && j.files[0].url;
+    if (url && /^https:\/\/\S+\.(jpg|jpeg|png|webp)$/.test(url)) {
       res.setHeader('Cache-Control', 'no-store');
       res.setHeader('Content-Type', 'application/json');
-      res.end(JSON.stringify({ url: txt }));
+      res.end(JSON.stringify({ url }));
       return;
     }
-    res.statusCode = 502; res.end('upload failed: ' + txt.slice(0, 80));
+    res.statusCode = 502; res.end('upload failed: ' + JSON.stringify(j).slice(0, 80));
   } catch (e) {
     res.statusCode = 502; res.end('upload error: ' + e.message);
   }

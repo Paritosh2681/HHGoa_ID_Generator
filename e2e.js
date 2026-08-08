@@ -1,20 +1,16 @@
-function b64ToJpeg(b64) {
-  return Buffer.from(b64, 'base64');
-}
+const fs = require('fs');
 
 (async () => {
-  const fs = require('fs');
   const jpeg = fs.readFileSync('assets/og-preview-2026.jpg');
-
-  // direct with browser UA
   const fd = new FormData();
-  fd.append('reqtype', 'fileupload');
-  fd.append('fileToUpload', new Blob([jpeg], { type: 'image/jpeg' }), 'card.jpg');
-  const r = await fetch('https://catbox.moe/user/api.php', {
-    method: 'POST', body: fd,
-    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/125 Safari/537.36' },
-  });
-  console.log('direct w/ UA:', r.status, (await r.text()).trim().slice(0, 80));
-
-  // via prod relay (relay has no UA set — test adding one there is a code change; first confirm direct works from this IP)
+  fd.append('files[]', new Blob([jpeg], { type: 'image/jpeg' }), 'card.jpg');
+  const r = await fetch('https://uguu.se/upload', { method: 'POST', body: fd, headers: { 'User-Agent': 'curl/8.4.0' } });
+  const j = await r.json();
+  const url = j && j.files && j.files[0] && j.files[0].url;
+  console.log('uguu:', r.status, 'url:', url);
+  if (url) {
+    const img = await fetch(url);
+    const buf = Buffer.from(await img.arrayBuffer());
+    console.log('  fetch back:', img.status, img.headers.get('content-type'), buf.length, 'magic:', buf[0] === 0xff && buf[1] === 0xd8);
+  }
 })();
