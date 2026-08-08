@@ -603,25 +603,40 @@ function captionFor() {
   return `New PFP, who dis? 🏝️ HH Goa 2026. Frame yours → ${url} #FrameInGoa`;
 }
 
-async function shareToX() {
+function shareToX() {
   if (!state.rendered) return;
   const text = captionFor();
-  try {
-    const cv = els.canvas;
-    const blob = await canvasToBlob(cv);
-    const file = new File([blob], 'hhgoa-2026.png', { type: 'image/png' });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({ files: [file], text, title: 'HH Goa 2026' });
-      return;
-    }
-  } catch (e) {
-    if (e && e.name === 'AbortError') return; // user cancelled
+  // Desktop: open X compose directly — your logged-in account opens in a new
+  // tab, caption pre-filled, and the link card shows the generated graphic
+  // (og:image). Synchronous window.open stays inside the click gesture so
+  // popup blockers can't swallow it.
+  const isTouch = (navigator.maxTouchPoints > 0) || /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent || '');
+  if (!isTouch || !navigator.canShare) {
+    openXIntent(text);
+    return;
   }
-  // fallback: X intent with link (OG preview shows the graphic)
+  // Mobile: native share sheet — X appears as a target with the actual PNG
+  // attached; post it publicly or send it as a DM from there.
+  (async () => {
+    try {
+      const blob = await canvasToBlob(els.canvas);
+      const file = new File([blob], 'hhgoa-2026.png', { type: 'image/png' });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], text, title: 'HH Goa 2026' });
+        return;
+      }
+    } catch (e) {
+      if (e && e.name === 'AbortError') return; // user cancelled the sheet
+    }
+    openXIntent(text);
+  })();
+}
+
+function openXIntent(text) {
   // NOTE: the intent's url= param already appends the link — don't duplicate it inline
   const url = encodeURIComponent(location.href.split('#')[0]);
   const t = encodeURIComponent(text.replace(/\s*→\s*\S+\s+(?=#FrameInGoa)/, ' '));
-  window.open(`https://twitter.com/intent/tweet?text=${t}&url=${url}`, '_blank', 'noopener');
+  window.open(`https://x.com/intent/post?text=${t}&url=${url}`, '_blank', 'noopener');
 }
 
 /* ══════════ EVENTS ══════════ */
