@@ -152,15 +152,6 @@ function coverCrop(img, boxW, boxH) {
   return { sx, sy, sw, sh };
 }
 
-function drawCoverImage(ctx, img, dx, dy, dw, dh, radius) {
-  ctx.save();
-  roundRect(ctx, dx, dy, dw, dh, radius || 0);
-  ctx.clip();
-  const c = coverCrop(img, dw, dh);
-  ctx.drawImage(img, c.sx, c.sy, c.sw, c.sh, dx, dy, dw, dh);
-  ctx.restore();
-}
-
 function textWidth(ctx, text) { return ctx.measureText(text).width; }
 
 /* ══════════ RENDER: BUILDER ID CARD (1200×1500) ══════════ */
@@ -480,12 +471,14 @@ function render() {
       const cv = state.format === 'id' ? await renderID() : await renderPFP();
       els.canvasEmpty.hidden = true;
       els.downloadBtn.disabled = false;
-      els.shareBtn.disabled = false;
+      // prebuild the share payload off the render pass — share button stays instant
+            state.payload = await buildPayload();
+            els.shareBtn.disabled = !state.payload;
       window.__app && (window.__app.lastCanvas = cv);
     } catch (e) {
       console.error('render failed', e);
     }
-  }, 120);
+  }, 80);
 }
 
 /* ══════════ FONTS ══════════ */
@@ -541,6 +534,7 @@ async function fileToImage(file) {
 
 function setPhoto(img, fileName) {
   state.photo = img;
+  state.photoCrop = null; // rebuild crop cache for the new photo
   state.fileName = fileName || '';
   els.uploadInner.hidden = true;
   els.uploadPreview.hidden = false;
@@ -548,8 +542,35 @@ function setPhoto(img, fileName) {
   render();
 }
 
+// cover-crop the photo ONCE into an offscreen canvas (1080×1080 — both card
+// formats draw from a square box), so every re-render is a single blit
+// instead of re-decoding + re-scaling the full-resolution source.
+function cropCache() {
+  if (!state.photo) return null;
+  if (state.photoCache) return state.photoCache;
+  const img = state.photo, S = 1080;
+  const c = document.createElement('canvas');
+  c.width = S; c.height = S;
+  const ctx = c.getContext('2d');
+  const src = coverCrop(img, S, S);
+  ctx.drawImage(img, src.sx, src.sy, src.sw, src.sh, 0, 0, S, S);
+  state.photoCache = c;
+  return c;
+}
+
+function drawCoverImage(ctx, img, dx, dy, dw, dh, radius) {
+  ctx.save();
+  roundRect(ctx, dx, dy, dw, dh, radius || 0);
+  ctx.clip();
+  const cached = cropCache();
+  const src = cached || img, S = cached ? 1080 : 0;
+  ctx.drawImage(src, cached ? 0 : 0, cached ? 0 : 0, cached ? S : img.naturalWidth, cached ? S : img.naturalHeight, dx, dy, dw, dh);
+  ctx.restore();
+}
+
 function clearPhoto() {
   state.photo = null;
+  state.photoCache = null;
   els.uploadInner.hidden = false;
   els.uploadPreview.hidden = true;
   els.previewImg.removeAttribute('src');
@@ -594,26 +615,60 @@ async function downloadPNG() {
 
 /* ══════════ SHARE TO X ══════════ */
 
-function captionFor() {
+// Compact base64url JSON that carries everything needed to re-render the
+// card from a URL — no DB. Include a small JPEG of the card itself so the
+// og:image preview shows the real card (photo included) on X.
+function base64url(s) {
+  // unescape/encodeURIComponent keeps Unicode names (Devanagari etc.) alive
+  return btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+// Downscale the card to ≤240px JPEG so the share URL stays compact (X
+// previews render ~320px anyway; 240 is visually identical).
+function cardJPEG() {
+  const cv = els.canvas;
+  const scale = Math.min(1, 240 / Math.max(cv.width, cv.height));
+  if (scale >= 1) return cv.toDataURL('image/jpeg', 0.55);
+  const c = document.createElement('canvas');
+  c.width = Math.round(cv.width * scale);
+  c.height = Math.round(cv.height * scale);
+  c.getContext('2d').drawImage(cv, 0, 0, c.width, c.height);
+  return c.toDataURL('image/jpeg', 0.55);
+}
+
+// Card image rides INSIDE the payload (base64url of a ≤320px JPEG). No file
+// host, no storage — the share link is self-contained and /api/png serves it.
+async function buildPayload() {
+  const name = (els.nameInput.value || '').trim().toUpperCase();
+  const stack = (els.stackInput.value || '').trim().toUpperCase();
+  const cls = (els.classInput.value || '').trim().toUpperCase();
+  const obj = { n: name, s: stack, c: cls, f: state.format, img: cardJPEG() };
+  return base64url(JSON.stringify(obj));
+}
+
+async function shareLink() {
+  return location.origin + '/share/' + (state.payload || await buildPayload());
+}
+
+async function captionFor() {
   const name = (els.nameInput.value || 'me').trim().toUpperCase();
   const cls = (els.classInput.value || pickClass(name, '', state.classSeed)).toUpperCase();
-  // ponytail: link = current page; swap for a per-card share link if the
-  // backend ever issues /share/<id> passes.
-  const link = location.origin + location.pathname;
-  if (state.format === 'id') {
+  const fmt = state.format;
+  const link = await shareLink();
+  if (fmt === 'id') {
     return `Just locked in my spot for Hacker House Goa 2026 🌴\n\n${name} BUILDER • ${cls}\n\nCheck out my pass: ${link}\n\n#FrameInGoa #HHGoa2026 #HackerHouseGoa`;
   }
   return `New PFP, who dis? 🏝️ HH Goa 2026. Frame yours #FrameInGoa`;
 }
 
 function shareToX() {
-  if (!state.rendered) return;
-  const text = captionFor();
-  // Mobile: native share sheet — X appears as a target with the actual PNG
-  // attached; post it publicly or send it as a DM from there.
-  const isTouch = (navigator.maxTouchPoints > 0) || /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent || '');
-  if (isTouch && navigator.canShare) {
-    (async () => {
+  if (!state.rendered && !state.payload) return;
+  (async () => {
+    const text = await captionFor();
+    // Mobile: native share sheet — X appears as a target with the actual PNG
+    // attached; post it publicly or send it as a DM from there.
+    const isTouch = (navigator.maxTouchPoints > 0) || /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent || '');
+    if (isTouch && navigator.canShare) {
       try {
         const blob = await canvasToBlob(els.canvas);
         const file = new File([blob], 'hhgoa-2026.png', { type: 'image/png' });
@@ -625,16 +680,17 @@ function shareToX() {
         if (e && e.name === 'AbortError') return; // user cancelled the sheet
       }
       openXWithImage(text);
-    })();
-    return;
-  }
-  openXWithImage(text);
+      return;
+    }
+    openXWithImage(text);
+  })();
 }
 
 // X's web intent cannot attach images (text/hashtags only) — so the desktop
-// flow opens X compose with the caption pre-filled and puts the ID card PNG
-// on the clipboard: paste it (Ctrl/⌘+V) into the compose box and it posts as
-// an image. No URL in the post — the card itself is what gets shared.
+// flow opens X compose with the caption pre-filled (link now points at the
+// card's unique /share/<payload> page, whose og:image shows the card on X)
+// and puts the ID card PNG on the clipboard: paste it (Ctrl/⌘+V) into the
+// compose box and it posts as an image.
 function openXWithImage(text) {
   const t = encodeURIComponent(text);
   (async () => {
@@ -721,5 +777,16 @@ els.classInput.value = pickClass('', '', 0);
 window.__app = {
   setPhoto, clearPhoto, render, renderID, renderPFP,
   pickClass, hashStr, captionFor, downloadPNG, shareToX,
+  ensureFonts, loadAsset, shareLink, buildPayload, cardJPEG,
   state, els, BRAND,
 };
+
+// Warm the render pipeline at boot: fonts + always-used assets load in the
+// background so the first GENERATE finishes in one frame instead of waiting
+// on network fetches.
+(function () {
+  ensureFonts().catch(() => {});
+  loadAsset('assets/Sun_rise.png');
+  loadAsset('assets/2-47.svg');
+  loadAsset('assets/goa_hindi.svg');
+})();
