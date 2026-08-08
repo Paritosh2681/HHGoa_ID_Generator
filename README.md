@@ -6,7 +6,7 @@ A web tool that turns an uploaded photo into a branded **HH Goa 2026 graphic** i
 
 Built to be *unmistakably* HH Goa: same colors, same fonts, same brutalist-tropical attitude as [hhgoa.com](https://hhgoa.com). No login. No signup. One pass, start to finish.
 
-![demo](assets/og-preview.jpg)
+![demo](assets/og-preview-2026.jpg)
 
 ## ✨ Features
 
@@ -29,7 +29,7 @@ node serve.js
 
 Or serve the folder statically anywhere (GitHub Pages, Vercel, Netlify, Cloudflare Pages — no build step).
 
-> **Deploy note:** for the link-share preview to show the generated graphic, set the `og:image` meta tag to an absolute URL of `assets/og-preview.jpg` on your deployed domain (relative URLs work locally; X's crawler needs an absolute one).
+> **Deploy note:** for the link-share preview to show the generated graphic, set the `og:image` meta tag to an absolute URL of `assets/og-preview-2026.jpg` on your deployed domain (relative URLs work locally; X's crawler needs an absolute one).
 
 ## 🧱 Structure
 
