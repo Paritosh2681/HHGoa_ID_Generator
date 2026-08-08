@@ -176,86 +176,84 @@ async function renderID() {
   const cls = els.classInput.value || pickClass(name, stack, state.classSeed);
   const idNo = 'HHG-26-' + (1000 + (hashStr(name + stack) % 9000));
 
-  // background
+  /* ── background ── */
   ctx.fillStyle = BRAND.green;
   ctx.fillRect(0, 0, W, H);
 
-  // subtle sun glow, top-right
+  // ghosted sun emblem behind the photo zone (tropical texture, very subtle)
   try {
     const sun = await loadAsset('assets/Sun_rise.png');
     ctx.save();
-    ctx.globalAlpha = 0.55;
-    ctx.drawImage(sun, 700, -170, 640, 640);
+    ctx.globalAlpha = 0.09;
+    ctx.drawImage(sun, 150, 142, 900, 900);
     ctx.restore();
   } catch (e) { /* optional decoration */ }
 
-  // dashed outer frame + corner pins
-  ctx.save();
-  ctx.strokeStyle = BRAND.yellow;
-  ctx.lineWidth = 2.5;
-  ctx.setLineDash([18, 14]);
-  roundRect(ctx, 26, 26, W - 52, H - 52, 14);
+  /* ── outer frame: chunky yellow slab + cream mat line + pink pins ── */
+  ctx.fillStyle = BRAND.yellow;
+  roundRect(ctx, 18, 18, W - 36, H - 36, 18);
+  ctx.fill();
+  ctx.fillStyle = BRAND.green;
+  roundRect(ctx, 38, 38, W - 76, H - 76, 12);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,251,232,0.85)';
+  ctx.lineWidth = 3;
+  roundRect(ctx, 46, 46, W - 92, H - 92, 10);
   ctx.stroke();
-  ctx.setLineDash([]);
   ctx.fillStyle = BRAND.pink;
-  ctx.beginPath(); ctx.arc(48, 48, 7, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(W - 48, 48, 7, 0, Math.PI * 2); ctx.fill();
-  ctx.restore();
+  for (const px of [62, W - 62]) {
+    for (const py of [62, H - 62]) {
+      ctx.beginPath(); ctx.arc(px, py, 6, 0, Math.PI * 2); ctx.fill();
+    }
+  }
 
-  // header
-  try {
-    const mark = await loadAsset('assets/2-47.svg');
-    ctx.drawImage(mark, 54, 58, 120, 120 * mark.naturalHeight / mark.naturalWidth);
-  } catch (e) { /* optional */ }
-
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'alphabetic';
-  setLetterSpacing(ctx, 3);
-  const hSize = fitText(ctx, 'HACKER HOUSE', BRAND.display, '800', 900, 100, 60);
-  ctx.font = `800 ${hSize}px ${BRAND.display}`;
-  ctx.fillStyle = BRAND.yellow;
-  ctx.fillText('HACKER HOUSE', W / 2, 168);
-
-  // date + गोवा line
-  ctx.font = '600 26px ' + BRAND.mono;
-  setLetterSpacing(ctx, 6);
-  ctx.fillStyle = BRAND.cream;
-  const dateStr = 'GOA, INDIA · 28–31 OCT 2026';
-  const dateW = textWidth(ctx, dateStr);
-  try {
-    const goa = await loadAsset('assets/goa_hindi.svg');
-    const gh = 58, gw = gh * goa.naturalWidth / goa.naturalHeight;
-    ctx.drawImage(goa, W / 2 + dateW / 2 + 16, 168 + hSize * 0.15, gw, gh);
-  } catch (e) { /* optional */ }
-  ctx.fillText(dateStr, W / 2 - 20, 218);
-
-  // vertical ID number on right edge
-  ctx.save();
-  ctx.translate(W - 40, H / 2);
-  ctx.rotate(Math.PI / 2);
-  ctx.font = '600 22px ' + BRAND.mono;
-  setLetterSpacing(ctx, 5);
-  ctx.fillStyle = BRAND.cream;
+  /* ── header meta: studio line + ID number ── */
   ctx.textAlign = 'left';
-  ctx.fillText('NO. ' + idNo, 0, 0);
-  ctx.restore();
+  ctx.textBaseline = 'alphabetic';
+  ctx.font = '600 20px ' + BRAND.mono;
+  setLetterSpacing(ctx, 4);
+  ctx.fillStyle = BRAND.cream;
+  ctx.fillText('2:47 PM STUDIO', 66, 86);
+  ctx.textAlign = 'right';
+  ctx.fillText('NO. ' + idNo, W - 66, 86);
+  setLetterSpacing(ctx, 0);
 
-  // photo block
-  const boxX = 280, boxY = 330, box = 640;
-  // yellow hard shadow
+  /* ── official logo lockup: Hacker house wordmark + गोवा (from hhgoa.com) ── */
+  const logoW = 620, logoH = Math.round(logoW * 237 / 1148); // keep source aspect
+  try {
+    const logo = await loadAsset('assets/Hacker_house.png');
+    const goa = await loadAsset('assets/goa_hindi.svg');
+    const goaW = Math.round(logoH * goa.naturalWidth / goa.naturalHeight);
+    const lockupW = logoW + 18 + goaW;
+    const lx = (W - lockupW) / 2;
+    ctx.drawImage(logo, lx, 78, logoW, logoH);
+    ctx.drawImage(goa, lx + logoW + 18, 78, goaW, logoH);
+  } catch (e) {
+    // fallback: text wordmark
+    ctx.textAlign = 'center';
+    setLetterSpacing(ctx, 3);
+    const hSize = fitText(ctx, 'HACKER HOUSE', BRAND.display, '800', 900, 100, 60);
+    ctx.font = `800 ${hSize}px ${BRAND.display}`;
+    ctx.fillStyle = BRAND.yellow;
+    ctx.fillText('HACKER HOUSE', W / 2, 178);
+  }
+  // yellow rule under the lockup
   ctx.fillStyle = BRAND.yellow;
-  roundRect(ctx, boxX + 14, boxY + 14, box, box, 12);
+  ctx.fillRect(W / 2 - 120, 232, 240, 5);
+
+  /* ── photo block ── */
+  const boxX = 270, boxY = 262, box = 660;
+  ctx.fillStyle = BRAND.yellow;
+  roundRect(ctx, boxX + 16, boxY + 16, box, box, 14);
   ctx.fill();
-  // white mat
   ctx.fillStyle = BRAND.white;
-  roundRect(ctx, boxX - 10, boxY - 10, box + 20, box + 20, 14);
+  roundRect(ctx, boxX - 10, boxY - 10, box + 20, box + 20, 16);
   ctx.fill();
-  // photo
   if (state.photo) {
-    drawCoverImage(ctx, state.photo, boxX, boxY, box, box, 10);
+    drawCoverImage(ctx, state.photo, boxX, boxY, box, box, 12);
   } else {
     ctx.fillStyle = BRAND.greenDeep;
-    roundRect(ctx, boxX, boxY, box, box, 10);
+    roundRect(ctx, boxX, boxY, box, box, 12);
     ctx.fill();
     ctx.fillStyle = 'rgba(255,251,232,0.35)';
     ctx.font = '700 44px ' + BRAND.display;
@@ -263,16 +261,16 @@ async function renderID() {
     ctx.fillText('YOUR PHOTO HERE', W / 2, boxY + box / 2 + 14);
   }
 
-  // corner brackets
+  // yellow corner brackets around the white mat
   ctx.strokeStyle = BRAND.yellow;
   ctx.lineWidth = 5;
   ctx.lineCap = 'round';
-  const bx = boxX - 10, by = boxY - 10, bw = box + 20, bh = box + 20, L = 52;
+  const bx = boxX - 10, by = boxY - 10, bw = box + 20, bh = box + 20, L = 54;
   const brackets = [
-    [bx, by, bx + L, by, bx, by + L],        // TL
-    [bx + bw - L, by, bx + bw, by, bx + bw, by + L],  // TR
-    [bx, by + bh - L, bx, by + bh, bx + L, by + bh],  // BL
-    [bx + bw - L, by + bh, bx + bw, by + bh, bx + bw, by + bh - L], // BR
+    [bx, by, bx + L, by, bx, by + L],
+    [bx + bw - L, by, bx + bw, by, bx + bw, by + L],
+    [bx, by + bh - L, bx, by + bh, bx + L, by + bh],
+    [bx + bw - L, by + bh, bx + bw, by + bh, bx + bw, by + bh - L],
   ];
   for (const [x1, y1, x2, y2, x3, y3] of brackets) {
     ctx.beginPath();
@@ -281,9 +279,9 @@ async function renderID() {
     ctx.stroke();
   }
 
-  // pink ID tag over photo corner
+  // pink ID tag over the photo corner
   ctx.save();
-  ctx.translate(boxX + 26, boxY + 26);
+  ctx.translate(boxX + 24, boxY + 24);
   ctx.rotate(-3 * Math.PI / 180);
   ctx.font = '700 24px ' + BRAND.mono;
   setLetterSpacing(ctx, 3);
@@ -299,80 +297,130 @@ async function renderID() {
   ctx.restore();
   setLetterSpacing(ctx, 0);
 
-  // name
-  ctx.textAlign = 'center';
-  const nSize = fitText(ctx, name, BRAND.display, '800', 1020, 104, 48);
-  ctx.font = `800 ${nSize}px ${BRAND.display}`;
-  ctx.fillStyle = BRAND.white;
-  ctx.fillText(name, W / 2, 1145);
-
-  // stack chip (cream, pink hard shadow)
-  const sSize = fitText(ctx, stack, BRAND.mono, '700', 880, 30, 16);
-  ctx.font = `700 ${sSize}px ${BRAND.mono}`;
-  setLetterSpacing(ctx, 4);
-  const sW = textWidth(ctx, stack);
-  const chipW = sW + 100, chipH = 66, chipY = 1195;
-  ctx.fillStyle = BRAND.pink;
-  roundRect(ctx, W / 2 - chipW / 2 + 6, chipY + 6, chipW, chipH, 8);
-  ctx.fill();
-  ctx.fillStyle = BRAND.cream;
-  roundRect(ctx, W / 2 - chipW / 2, chipY, chipW, chipH, 8);
-  ctx.fill();
-  ctx.fillStyle = BRAND.black;
-  ctx.textAlign = 'center';
-  ctx.fillText(stack, W / 2, chipY + 44);
-
-  // builder class chip (yellow, rotated)
+  /* ── vertical edge text (left margin) ── */
   ctx.save();
-  ctx.translate(W / 2, 1345);
-  ctx.rotate(-2 * Math.PI / 180);
-  const clsText = 'CLASS · ' + cls;
-  const cSize = fitText(ctx, clsText, BRAND.display, '700', 940, 46, 28);
-  ctx.font = `700 ${cSize}px ${BRAND.display}`;
-  setLetterSpacing(ctx, 2);
-  const cW = textWidth(ctx, clsText);
-  const cH = 78;
-  ctx.fillStyle = 'rgba(0,0,0,0.4)';
-  roundRect(ctx, -cW / 2 - 44 + 8, -cH / 2 - 20 + 8, cW + 88, cH + 40, 8);
-  ctx.fill();
-  ctx.fillStyle = BRAND.yellow;
-  roundRect(ctx, -cW / 2 - 44, -cH / 2 - 20, cW + 88, cH + 40, 8);
-  ctx.fill();
-  ctx.fillStyle = BRAND.black;
-  ctx.textAlign = 'center';
-  ctx.fillText(clsText, 0, 14);
+  ctx.translate(66, H / 2);
+  ctx.rotate(Math.PI / 2);
+  ctx.font = '600 20px ' + BRAND.mono;
+  setLetterSpacing(ctx, 5);
+  ctx.fillStyle = 'rgba(255,251,232,0.75)';
+  ctx.textAlign = 'left';
+  ctx.fillText('OFFICIAL BUILDER · HH GOA 2026', 0, 0);
   ctx.restore();
   setLetterSpacing(ctx, 0);
 
-  // bottom cream strip
+  /* ── identity zone ── */
+  // eyebrow
+  ctx.textAlign = 'center';
+  ctx.font = '600 22px ' + BRAND.mono;
+  setLetterSpacing(ctx, 7);
   ctx.fillStyle = BRAND.cream;
-  ctx.fillRect(0, 1400, W, 100);
+  ctx.fillText('ADMIT ONE · HH GOA 2026', W / 2, 1000);
+  setLetterSpacing(ctx, 0);
+
+  // name (big, white, hard drop shadow)
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.30)';
+  ctx.shadowOffsetY = 4;
+  ctx.shadowBlur = 0;
+  const nSize = fitText(ctx, name, BRAND.display, '800', 980, 118, 54);
+  ctx.font = `800 ${nSize}px ${BRAND.display}`;
+  ctx.fillStyle = BRAND.white;
+  ctx.fillText(name, W / 2, 1106);
+  ctx.restore();
+
+  // yellow underline
+  ctx.fillStyle = BRAND.yellow;
+  ctx.fillRect(W / 2 - 130, 1134, 260, 7);
+
+  // stack chip (cream, pink hard shadow, slight tilt)
+  ctx.save();
+  ctx.translate(W / 2, 1200);
+  ctx.rotate(-1.5 * Math.PI / 180);
+  const sSize = fitText(ctx, stack, BRAND.mono, '700', 900, 30, 16);
+  ctx.font = `700 ${sSize}px ${BRAND.mono}`;
+  setLetterSpacing(ctx, 4);
+  const sW = textWidth(ctx, stack);
+  const chipW = sW + 92, chipH = 64;
+  ctx.fillStyle = BRAND.pink;
+  roundRect(ctx, -chipW / 2 + 7, -chipH / 2 + 7, chipW, chipH, 10);
+  ctx.fill();
+  ctx.fillStyle = BRAND.cream;
+  roundRect(ctx, -chipW / 2, -chipH / 2, chipW, chipH, 10);
+  ctx.fill();
   ctx.fillStyle = BRAND.black;
+  ctx.textAlign = 'center';
+  ctx.fillText(stack, 0, 9);
+  ctx.restore();
+  setLetterSpacing(ctx, 0);
+
+  // builder class chip (yellow, black shadow, opposite tilt, overlaps stack)
+  ctx.save();
+  ctx.translate(W / 2, 1268);
+  ctx.rotate(2 * Math.PI / 180);
+  const clsText = 'CLASS · ' + cls;
+  const cSize = fitText(ctx, clsText, BRAND.display, '700', 960, 40, 26);
+  ctx.font = `700 ${cSize}px ${BRAND.display}`;
+  setLetterSpacing(ctx, 2);
+  const cW = textWidth(ctx, clsText);
+  const cH = 74;
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  roundRect(ctx, -cW / 2 - 38 + 8, -cH / 2 - 16 + 8, cW + 76, cH + 32, 10);
+  ctx.fill();
+  ctx.fillStyle = BRAND.yellow;
+  roundRect(ctx, -cW / 2 - 38, -cH / 2 - 16, cW + 76, cH + 32, 10);
+  ctx.fill();
+  ctx.fillStyle = BRAND.black;
+  ctx.textAlign = 'center';
+  ctx.fillText(clsText, 0, 12);
+  ctx.restore();
+  setLetterSpacing(ctx, 0);
+
+  /* ── bottom cream band (ticket stub) ── */
+  const bandY = 1336, bandH = 126;
+  ctx.fillStyle = BRAND.yellow;
+  ctx.fillRect(38, bandY - 6, W - 76, 6);
+  ctx.fillStyle = BRAND.cream;
+  ctx.fillRect(38, bandY, W - 76, bandH);
+  // perforation notches (ticket punch) at both edges of the band line
+  ctx.fillStyle = BRAND.cream;
+  ctx.beginPath(); ctx.arc(0, bandY, 20, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(W, bandY, 20, 0, Math.PI * 2); ctx.fill();
+
+  // left: slogan
   ctx.textAlign = 'left';
-  ctx.font = '700 34px ' + BRAND.display;
+  ctx.fillStyle = BRAND.green;
+  ctx.font = '800 36px ' + BRAND.display;
   setLetterSpacing(ctx, 1);
-  ctx.fillText('LESS NOISE.', 60, 1444);
-  ctx.font = '700 34px ' + BRAND.display;
-  ctx.fillText('MORE SIGNAL.', 60, 1480);
-  // barcode (seeded by name)
+  ctx.fillText('LESS NOISE.', 66, 1400);
+  ctx.font = '800 52px ' + BRAND.display;
+  ctx.fillText('MORE SIGNAL.', 66, 1450);
+
+  // center: barcode (seeded by name+stack)
   ctx.fillStyle = BRAND.black;
-  const bcX = W / 2 - 110, bcY = 1432;
+  const bcX = W / 2 - 110, bcY = 1356;
   let seed = hashStr(name + stack);
   for (let i = 0; i < 44; i++) {
-    seed = (seed * 1103515245 + 12345) >>> 0;
+    // BigInt keeps the LCG exact — float64 multiplication overflows 2^53 and
+    // collapses every seed to a multiple of 512 (all bars would be skipped)
+    seed = Number((BigInt(seed) * 1103515245n + 12345n) % 4294967296n);
     const bw = 2 + (seed % 3) * 2;
     if (seed % 4 !== 0) ctx.fillRect(bcX + i * 5, bcY, bw, 46);
   }
-  ctx.font = '600 16px ' + BRAND.mono;
+  ctx.font = '600 15px ' + BRAND.mono;
   setLetterSpacing(ctx, 4);
   ctx.fillText('247 BUILDERS', bcX, bcY + 62);
-  // hashtag
-  ctx.font = '700 24px ' + BRAND.mono;
-  setLetterSpacing(ctx, 2);
+
+  // right: date + hashtag
   ctx.textAlign = 'right';
+  ctx.font = '600 19px ' + BRAND.mono;
+  setLetterSpacing(ctx, 3);
   ctx.fillStyle = BRAND.black;
-  ctx.fillText('#FRAMEINGOA', W - 60, 1470);
-  ctx.textAlign = 'left';
+  ctx.fillText('GOA, INDIA · 28–31 OCT 2026', W - 66, 1400);
+  ctx.font = '700 25px ' + BRAND.mono;
+  setLetterSpacing(ctx, 2);
+  ctx.fillStyle = BRAND.green;
+  ctx.fillText('#FRAMEINGOA', W - 66, 1446);
   setLetterSpacing(ctx, 0);
 
   state.rendered = true;
