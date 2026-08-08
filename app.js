@@ -636,7 +636,7 @@ function cardJPEG() {
   return c.toDataURL('image/jpeg', 0.55);
 }
 
-// Card image: try to host it via our serverless relay (catbox → short URL so
+// Card image: try to host it via our serverless relay (uguu.se → short URL so
 // X's og:image crawler accepts it); fall back to embedded JPEG if offline.
 async function buildPayload() {
   const name = (els.nameInput.value || '').trim().toUpperCase();

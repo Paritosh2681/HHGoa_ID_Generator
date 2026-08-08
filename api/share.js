@@ -4,7 +4,7 @@
 //   GET /api/png/<payload>             → the card image (og:image target)
 //
 // Payload = base64url(JSON { n:name, s:stack, c:class, f:format, img })
-// img is either a catbox URL (short) or an embedded data: JPEG (fallback).
+// img is either a short hosted URL (d.uguu.se / n.uguu.se) or an embedded data: JPEG (offline fallback).
 
 const B64RE = /^[A-Za-z0-9_-]+$/;
 
@@ -21,7 +21,7 @@ function absUrl(req, path) {
 }
 
 // POST body = raw JPEG bytes (or base64) → upload to uguu.se → {url}
-// ponytail: anonymous host, no key, files long-lived. Fallback lives client-side.
+// ponytail: anon host, no key, files long-lived. Embedded-JPEG fallback client-side.
 async function uploadImage(req, res) {
   try {
     const chunks = [];
@@ -101,7 +101,7 @@ function CARD_HTML(p, ogImage) {
 }
 
 module.exports = async (req, res) => {
-  // POST /api/upimg → relay the card JPEG to catbox; returns {url}
+  // POST /api/upimg → relay the card JPEG to uguu.se; returns {url}
   if (req.method === 'POST' && ((req.query && req.query.up) || /upimg/.test(req.url))) {
     return uploadImage(req, res);
   }
@@ -114,7 +114,7 @@ module.exports = async (req, res) => {
 
   if (isPng) {
     if (p.img && p.img.startsWith('http')) {
-      // catbox URL — 302 to it; crawlers and browsers follow fine
+      // hosted URL — 302 to it; crawlers and browsers follow fine
       res.statusCode = 302; res.setHeader('Location', p.img); res.end();
       return;
     }
@@ -131,7 +131,7 @@ module.exports = async (req, res) => {
     return;
   }
 
-  // og:image prefers the short catbox URL; embedded data: falls back to the
+  // og:image prefers the short hosted URL; embedded data: falls back to the
   // /api/png/<payload> endpoint so X still renders a card preview.
   const ogImage = p.img && p.img.startsWith('http')
     ? p.img
