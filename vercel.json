@@ -1,5 +1,6 @@
 {
   "rewrites": [
+    { "source": "/api/upimg", "destination": "/api/share?up=1" },
     { "source": "/share/:payload", "destination": "/api/share?p=:payload" },
     { "source": "/api/png/:payload", "destination": "/api/share?png=1&p=:payload" }
   ]

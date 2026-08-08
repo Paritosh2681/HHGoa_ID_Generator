@@ -636,13 +636,21 @@ function cardJPEG() {
   return c.toDataURL('image/jpeg', 0.55);
 }
 
-// Card image rides INSIDE the payload (base64url of a ≤320px JPEG). No file
-// host, no storage — the share link is self-contained and /api/png serves it.
+// Card image: try to host it via our serverless relay (catbox → short URL so
+// X's og:image crawler accepts it); fall back to embedded JPEG if offline.
 async function buildPayload() {
   const name = (els.nameInput.value || '').trim().toUpperCase();
   const stack = (els.stackInput.value || '').trim().toUpperCase();
   const cls = (els.classInput.value || '').trim().toUpperCase();
-  const obj = { n: name, s: stack, c: cls, f: state.format, img: cardJPEG() };
+  let img;
+  try {
+    const b64 = cardJPEG().split(',')[1];
+    const r = await fetch('/api/upimg', { method: 'POST', body: b64 });
+    const j = await r.json();
+    if (j && j.url) img = j.url;
+  } catch (e) { /* offline / relay down */ }
+  if (!img) img = cardJPEG(); // embedded fallback — long URL — share still works
+  const obj = { n: name, s: stack, c: cls, f: state.format, img };
   return base64url(JSON.stringify(obj));
 }
 

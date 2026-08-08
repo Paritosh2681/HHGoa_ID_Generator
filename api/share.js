@@ -20,6 +20,42 @@ function absUrl(req, path) {
   return `${proto}://${host}${path}`;
 }
 
+// POST body = raw JPEG bytes (or base64) → upload to catbox → {url}
+// ponytail: catbox anon upload, no key, images persist. Fallback lives client-side.
+async function uploadImage(req, res) {
+  try {
+    const chunks = [];
+    for await (const c of req) chunks.push(c);
+    let buf = Buffer.concat(chunks);
+    if (buf.length > 0 && buf[0] !== 0xff) {
+      // not a JPEG magic → treat body as base64 of the image
+      const b = buf.toString('utf8').trim();
+      buf = Buffer.from(b.replace(/^data:image\/\w+;base64,/, ''), 'base64');
+    }
+    if (!buf.length || buf[0] !== 0xff || buf[1] !== 0xd8) {
+      const m = /base64,([A-Za-z0-9+/=]+)/.exec(req.headers['content-type'] || '') || /base64,([A-Za-z0-9+/=]+)/.exec((req.body && req.body.b64) || '');
+      if (m) buf = Buffer.from(m[1], 'base64');
+    }
+    if (buf.length < 100 || buf[0] !== 0xff || buf[1] !== 0xd8) {
+      res.statusCode = 400; res.end('bad image'); return;
+    }
+    const fd = new FormData();
+    fd.append('reqtype', 'fileupload');
+    fd.append('fileToUpload', new Blob([buf], { type: 'image/jpeg' }), 'card.jpg');
+    const r = await fetch('https://catbox.moe/user/api.php', { method: 'POST', body: fd });
+    const txt = (await r.text()).trim();
+    if (/^https:\/\/(files\.)?catbox\.moe\/.+\.(jpg|jpeg|png|webp)$/.test(txt)) {
+      res.setHeader('Cache-Control', 'no-store');
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ url: txt }));
+      return;
+    }
+    res.statusCode = 502; res.end('upload failed: ' + txt.slice(0, 80));
+  } catch (e) {
+    res.statusCode = 502; res.end('upload error: ' + e.message);
+  }
+}
+
 function CARD_HTML(p, ogImage) {
   return `<!DOCTYPE html>
 <html lang="en">
@@ -62,6 +98,10 @@ function CARD_HTML(p, ogImage) {
 }
 
 module.exports = async (req, res) => {
+  // POST /api/upimg → relay the card JPEG to catbox; returns {url}
+  if (req.method === 'POST' && ((req.query && req.query.up) || /upimg/.test(req.url))) {
+    return uploadImage(req, res);
+  }
   // Rewritten routes: /share/<payload> → /api/share?p=<payload>, /api/png/<payload> → ?png=1&p=<payload>
   const payload = (req.query && req.query.p) || req.url.split('/').filter(Boolean).pop();
   const isPng = !!((req.query && req.query.png) || (req.url.split('/')[1] === 'api' && req.url.split('/')[2] === 'png'));
