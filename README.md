@@ -17,7 +17,7 @@ Built to be *unmistakably* HH Goa: same colors, same fonts, same brutalist-tropi
 | **Real uploads** | JPG, PNG, **HEIC** (iPhone, decoded in-browser), WEBP — any aspect ratio, off-center crops handled by smart cover-crop |
 | **Near-instant** | Renders live as you type — no loading screens |
 | **Real download** | Actual PNG file, not a screen-only render |
-| **Share to X** | Pre-filled caption with `#FrameInGoa`; shares the image via the native share sheet (Web Share API) or opens a pre-filled tweet |
+| **Share to X** | Pre-filled caption with `#FrameInGoa`; copies the generated card image to your clipboard and opens X compose — paste (Ctrl/⌘+V) to post the card itself, no link. Mobile uses the native share sheet (image attached) |
 | **Mobile-first** | Works in one thumb on a phone |
 
 ## 🚀 Run it

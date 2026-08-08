@@ -595,48 +595,70 @@ async function downloadPNG() {
 /* ══════════ SHARE TO X ══════════ */
 
 function captionFor() {
-  const url = location.href.split('#')[0];
   const name = (els.nameInput.value || 'me').trim().toUpperCase();
   if (state.format === 'id') {
-    return `My HH Goa 2026 Builder ID just dropped 🏝️ ${name}. Make yours in one pass → ${url} #FrameInGoa`;
+    return `My HH Goa 2026 Builder ID just dropped 🏝️ ${name}. Make yours in one pass #FrameInGoa`;
   }
-  return `New PFP, who dis? 🏝️ HH Goa 2026. Frame yours → ${url} #FrameInGoa`;
+  return `New PFP, who dis? 🏝️ HH Goa 2026. Frame yours #FrameInGoa`;
 }
 
 function shareToX() {
   if (!state.rendered) return;
   const text = captionFor();
-  // Desktop: open X compose directly — your logged-in account opens in a new
-  // tab, caption pre-filled, and the link card shows the generated graphic
-  // (og:image). Synchronous window.open stays inside the click gesture so
-  // popup blockers can't swallow it.
-  const isTouch = (navigator.maxTouchPoints > 0) || /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent || '');
-  if (!isTouch || !navigator.canShare) {
-    openXIntent(text);
-    return;
-  }
   // Mobile: native share sheet — X appears as a target with the actual PNG
   // attached; post it publicly or send it as a DM from there.
+  const isTouch = (navigator.maxTouchPoints > 0) || /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent || '');
+  if (isTouch && navigator.canShare) {
+    (async () => {
+      try {
+        const blob = await canvasToBlob(els.canvas);
+        const file = new File([blob], 'hhgoa-2026.png', { type: 'image/png' });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], text, title: 'HH Goa 2026' });
+          return;
+        }
+      } catch (e) {
+        if (e && e.name === 'AbortError') return; // user cancelled the sheet
+      }
+      openXWithImage(text);
+    })();
+    return;
+  }
+  openXWithImage(text);
+}
+
+// X's web intent cannot attach images (text/hashtags only) — so the desktop
+// flow opens X compose with the caption pre-filled and puts the ID card PNG
+// on the clipboard: paste it (Ctrl/⌘+V) into the compose box and it posts as
+// an image. No URL in the post — the card itself is what gets shared.
+function openXWithImage(text) {
+  const t = encodeURIComponent(text);
+  window.open(`https://x.com/intent/post?text=${t}`, '_blank', 'noopener');
   (async () => {
     try {
       const blob = await canvasToBlob(els.canvas);
-      const file = new File([blob], 'hhgoa-2026.png', { type: 'image/png' });
-      if (navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], text, title: 'HH Goa 2026' });
-        return;
-      }
+      if (typeof ClipboardItem === 'undefined') throw new Error('no ClipboardItem');
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      flashToast('ID card copied — paste it (Ctrl/⌘+V) into the X post');
     } catch (e) {
-      if (e && e.name === 'AbortError') return; // user cancelled the sheet
+      downloadPNG();
+      flashToast('ID card downloaded — attach it to the X post');
     }
-    openXIntent(text);
   })();
 }
 
-function openXIntent(text) {
-  // NOTE: the intent's url= param already appends the link — don't duplicate it inline
-  const url = encodeURIComponent(location.href.split('#')[0]);
-  const t = encodeURIComponent(text.replace(/\s*→\s*\S+\s+(?=#FrameInGoa)/, ' '));
-  window.open(`https://x.com/intent/post?text=${t}&url=${url}`, '_blank', 'noopener');
+let toastTimer = null;
+function flashToast(msg) {
+  let t = document.getElementById('x-toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'x-toast';
+    t.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:9999;background:#fee101;color:#0b0b0b;border:2px solid #0b0b0b;box-shadow:6px 6px 0 #0b0b0b;padding:12px 18px;font:700 14px/1.3 "Victor Mono",monospace;max-width:90vw;text-align:center;';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.remove(); }, 6000);
 }
 
 /* ══════════ EVENTS ══════════ */
