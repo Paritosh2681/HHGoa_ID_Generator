@@ -225,13 +225,8 @@ async function renderID() {
   setLetterSpacing(ctx, 6);
   ctx.fillStyle = BRAND.cream;
   const dateStr = 'GOA, INDIA · 28–31 OCT 2026';
-  const dateW = textWidth(ctx, dateStr);
   const dateY = 290;
-  try {
-    const goa = await loadAsset('assets/goa_hindi.svg');
-    const gh = 40, gw = gh * goa.naturalWidth / goa.naturalHeight;
-    ctx.drawImage(goa, W / 2 + dateW / 2 + 16, dateY - 30, gw, gh);
-  } catch (e) { /* optional */ }
+  ctx.textAlign = 'center';
   ctx.fillText(dateStr, W / 2 - 20, dateY);
 
   // vertical ID number on right edge
