@@ -245,8 +245,8 @@ async function renderID() {
   ctx.fillText('NO. ' + idNo, 0, 0);
   ctx.restore();
 
-  // photo block
-  const boxX = 280, boxY = 330, box = 640;
+  // photo block — 560px (slightly smaller than before, same center point)
+  const boxX = 320, boxY = 370, box = 560;
   // yellow hard shadow
   ctx.fillStyle = BRAND.yellow;
   roundRect(ctx, boxX + 14, boxY + 14, box, box, 12);
