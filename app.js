@@ -673,23 +673,8 @@ function shareToX() {
   if (!state.rendered && !state.payload) return;
   (async () => {
     const text = await captionFor();
-    // Mobile: native share sheet — X appears as a target with the actual PNG
-    // attached; post it publicly or send it as a DM from there.
-    const isTouch = (navigator.maxTouchPoints > 0) || /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent || '');
-    if (isTouch && navigator.canShare) {
-      try {
-        const blob = await canvasToBlob(els.canvas);
-        const file = new File([blob], 'hhgoa-2026.png', { type: 'image/png' });
-        if (navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file], text, title: 'HH Goa 2026' });
-          return;
-        }
-      } catch (e) {
-        if (e && e.name === 'AbortError') return; // user cancelled the sheet
-      }
-      openXWithImage(text);
-      return;
-    }
+    // Codepath is identical on mobile + desktop: open X's web intent with the
+    // caption (photo arrives via the share-link og:image preview).
     openXWithImage(text);
   })();
 }
