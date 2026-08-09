@@ -167,18 +167,31 @@ async function renderID() {
   const cls = els.classInput.value || pickClass(name, stack, state.classSeed);
   const idNo = 'HHG-26-' + (1000 + (hashStr(name + stack) % 9000));
 
-  // background
-  ctx.fillStyle = BRAND.green;
-  ctx.fillRect(0, 0, W, H);
-
-  // subtle sun glow, top-right
+  // background — full-bleed Goa beach sunrise (same Sun_rise art, whole card)
   try {
     const sun = await loadAsset('assets/Sun_rise.png');
-    ctx.save();
-    ctx.globalAlpha = 0.55;
-    ctx.drawImage(sun, 700, -170, 640, 640);
-    ctx.restore();
-  } catch (e) { /* optional decoration */ }
+    const c = coverCrop(sun, W, H);
+    ctx.drawImage(sun, c.sx, c.sy, c.sw, c.sh, 0, 0, W, H);
+  } catch (e) {
+    ctx.fillStyle = BRAND.green;
+    ctx.fillRect(0, 0, W, H);
+  }
+  // brand wash — keeps every element readable over the photo
+  ctx.fillStyle = 'rgba(11,104,57,0.22)';
+  ctx.fillRect(0, 0, W, H);
+  // top scrim — the yellow header + logo sit on dark green
+  const topScrim = ctx.createLinearGradient(0, 0, 0, 340);
+  topScrim.addColorStop(0, 'rgba(11,104,57,0.92)');
+  topScrim.addColorStop(1, 'rgba(11,104,57,0)');
+  ctx.fillStyle = topScrim;
+  ctx.fillRect(0, 0, W, 340);
+  // name scrim — soft dark band behind the white name text
+  const nameScrim = ctx.createLinearGradient(0, 1000, 0, 1210);
+  nameScrim.addColorStop(0, 'rgba(11,104,57,0)');
+  nameScrim.addColorStop(0.5, 'rgba(11,104,57,0.72)');
+  nameScrim.addColorStop(1, 'rgba(11,104,57,0)');
+  ctx.fillStyle = nameScrim;
+  ctx.fillRect(0, 1000, W, 210);
 
   // dashed outer frame + corner pins
   ctx.save();
@@ -193,32 +206,33 @@ async function renderID() {
   ctx.beginPath(); ctx.arc(W - 48, 48, 7, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
 
-  // header
+  // header — official HH Goa lockup: HACKER [गोवा] HOUSE (hhgoa.com hero arrangement)
   try {
-    const mark = await loadAsset('assets/2-47.svg');
-    ctx.drawImage(mark, 54, 58, 120, 120 * mark.naturalHeight / mark.naturalWidth);
+    const lockup = await loadAsset('assets/Hacker_house.png');
+    const goa = await loadAsset('assets/goa_hindi.svg');
+    const lw = 880, lh = lw * lockup.naturalHeight / lockup.naturalWidth;
+    ctx.drawImage(lockup, W / 2 - lw / 2, 52, lw, lh);
+    // Hindi गोवा (yellow + pink outline) over the baked middle — site-proportional
+    // (site: 153.94x151.77 on a 1162x251 lockup, centered ~46.3% down)
+    const gw = lw * (153.94 / 1162), gh = gw * goa.naturalHeight / goa.naturalWidth;
+    const gx = W / 2 - gw / 2;
+    const gy = 52 + lh * (280.43 + 151.77 / 2 - 240) / 251 - gh / 2;
+    ctx.drawImage(goa, gx, gy, gw, gh);
   } catch (e) { /* optional */ }
 
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'alphabetic';
-  setLetterSpacing(ctx, 3);
-  const hSize = fitText(ctx, 'HACKER HOUSE', BRAND.display, '800', 900, 100, 60);
-  ctx.font = `800 ${hSize}px ${BRAND.display}`;
-  ctx.fillStyle = BRAND.yellow;
-  ctx.fillText('HACKER HOUSE', W / 2, 168);
-
   // date + गोवा line
-  ctx.font = '600 26px ' + BRAND.mono;
+  ctx.font = '600 24px ' + BRAND.mono;
   setLetterSpacing(ctx, 6);
   ctx.fillStyle = BRAND.cream;
   const dateStr = 'GOA, INDIA · 28–31 OCT 2026';
   const dateW = textWidth(ctx, dateStr);
+  const dateY = 290;
   try {
     const goa = await loadAsset('assets/goa_hindi.svg');
-    const gh = 58, gw = gh * goa.naturalWidth / goa.naturalHeight;
-    ctx.drawImage(goa, W / 2 + dateW / 2 + 16, 168 + hSize * 0.15, gw, gh);
+    const gh = 40, gw = gh * goa.naturalWidth / goa.naturalHeight;
+    ctx.drawImage(goa, W / 2 + dateW / 2 + 16, dateY - 30, gw, gh);
   } catch (e) { /* optional */ }
-  ctx.fillText(dateStr, W / 2 - 20, 218);
+  ctx.fillText(dateStr, W / 2 - 20, dateY);
 
   // vertical ID number on right edge
   ctx.save();
@@ -780,6 +794,7 @@ window.__app = {
 (function () {
   ensureFonts().catch(() => {});
   loadAsset('assets/Sun_rise.png');
+  loadAsset('assets/Hacker_house.png');
   loadAsset('assets/2-47.svg');
   loadAsset('assets/goa_hindi.svg');
 })();
